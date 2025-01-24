@@ -14,6 +14,14 @@ import gleam/option.{type Option}
 /// See [the Erlang map module](https://erlang.org/doc/man/maps.html) for more
 /// information.
 ///
+@target(erlang)
+pub type Dict(key, value)
+
+@target(javascript)
+pub type Dict(key, value)
+
+@target(go)
+@external(go, "", "Dict_t")
 pub type Dict(key, value)
 
 /// Determines the number of key-value pairs in the dict.
@@ -33,6 +41,7 @@ pub type Dict(key, value)
 ///
 @external(erlang, "maps", "size")
 @external(javascript, "../gleam_stdlib.mjs", "map_size")
+@external(go, "", "Size")
 pub fn size(dict: Dict(k, v)) -> Int
 
 /// Determines whether or not the dict is empty.
@@ -77,6 +86,7 @@ pub fn is_empty(dict: Dict(k, v)) -> Bool {
 ///
 @external(erlang, "maps", "to_list")
 @external(javascript, "../gleam_stdlib.mjs", "map_to_list")
+@external(go, "", "ToList")
 pub fn to_list(dict: Dict(k, v)) -> List(#(k, v))
 
 /// Converts a list of 2-element tuples `#(key, value)` to a dict.
@@ -126,6 +136,7 @@ fn do_has_key(key: k, dict: Dict(k, v)) -> Bool {
 ///
 @external(erlang, "maps", "new")
 @external(javascript, "../gleam_stdlib.mjs", "new_map")
+@external(go, "", "New")
 pub fn new() -> Dict(k, v)
 
 /// Fetches a value from a dict for a given key.
@@ -147,6 +158,7 @@ pub fn new() -> Dict(k, v)
 ///
 @external(erlang, "gleam_stdlib", "map_get")
 @external(javascript, "../gleam_stdlib.mjs", "map_get")
+@external(go, "", "Get")
 pub fn get(from: Dict(k, v), get: k) -> Result(v, Nil)
 
 /// Inserts a value into the dict with the given key.
@@ -172,6 +184,7 @@ pub fn insert(into dict: Dict(k, v), for key: k, insert value: v) -> Dict(k, v) 
 
 @external(erlang, "maps", "put")
 @external(javascript, "../gleam_stdlib.mjs", "map_insert")
+@external(go, "", "doInsert")
 fn do_insert(key: k, value: v, dict: Dict(k, v)) -> Dict(k, v)
 
 /// Updates all values in a given dict by calling a given function on each key
@@ -386,6 +399,7 @@ pub fn delete(from dict: Dict(k, v), delete key: k) -> Dict(k, v) {
 
 @external(erlang, "maps", "remove")
 @external(javascript, "../gleam_stdlib.mjs", "map_remove")
+@external(go, "", "doDelete")
 fn do_delete(a: k, b: Dict(k, v)) -> Dict(k, v)
 
 /// Creates a new dict from a given dict with all the same entries except any with

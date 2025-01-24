@@ -10,6 +10,7 @@
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
 
@@ -50,8 +51,16 @@ pub type Uri {
 /// // )
 /// ```
 ///
-@external(erlang, "gleam_stdlib", "uri_parse")
 pub fn parse(uri_string: String) -> Result(Uri, Nil) {
+  do_parse(uri_string)
+}
+
+@target(erlang)
+@external(erlang, "gleam_stdlib", "uri_parse")
+fn do_parse(uri_string: String) -> Result(Uri, Nil)
+
+@target(javascript)
+fn do_parse(uri_string: String) -> Result(Uri, Nil) {
   // This parses a uri_string following the regex defined in
   // https://tools.ietf.org/html/rfc3986#appendix-B
   //
@@ -71,6 +80,10 @@ pub fn parse(uri_string: String) -> Result(Uri, Nil) {
 
   parse_scheme_loop(uri_string, uri_string, default_pieces, 0)
 }
+
+@target(go)
+@external(go, "", "doParse")
+fn do_parse(uri_string: String) -> Result(Uri, Nil)
 
 fn parse_scheme_loop(
   original: String,
@@ -495,10 +508,12 @@ fn parse_fragment(rest: String, pieces: Uri) -> Result(Uri, Nil) {
 // `fold_codeunits`-style loop and a state machine.
 @external(erlang, "gleam_stdlib", "string_pop_codeunit")
 @external(javascript, "../gleam_stdlib.mjs", "pop_codeunit")
+@external(go, "", "popCodeunit")
 fn pop_codeunit(str: String) -> #(Int, String)
 
 @external(erlang, "binary", "part")
 @external(javascript, "../gleam_stdlib.mjs", "string_codeunit_slice")
+@external(go, "", "codeunitSlice")
 fn codeunit_slice(str: String, at_index from: Int, length length: Int) -> String
 
 fn extra_required(list: List(a), remaining: Int) -> Int {
@@ -523,6 +538,7 @@ fn extra_required(list: List(a), remaining: Int) -> Int {
 ///
 @external(erlang, "gleam_stdlib", "parse_query")
 @external(javascript, "../gleam_stdlib.mjs", "parse_query")
+@external(go, "", "ParseQuery")
 pub fn parse_query(query: String) -> Result(List(#(String, String)), Nil)
 
 /// Encodes a list of key value pairs as a URI query string.
@@ -559,6 +575,7 @@ fn query_pair(pair: #(String, String)) -> StringTree {
 ///
 @external(erlang, "gleam_stdlib", "percent_encode")
 @external(javascript, "../gleam_stdlib.mjs", "percent_encode")
+@external(go, "", "PercentEncode")
 pub fn percent_encode(value: String) -> String
 
 /// Decodes a percent encoded string.
@@ -572,6 +589,7 @@ pub fn percent_encode(value: String) -> String
 ///
 @external(erlang, "gleam_stdlib", "percent_decode")
 @external(javascript, "../gleam_stdlib.mjs", "percent_decode")
+@external(go, "", "PercentDecode")
 pub fn percent_decode(value: String) -> Result(String, Nil)
 
 /// Splits the path section of a URI into it's constituent segments.

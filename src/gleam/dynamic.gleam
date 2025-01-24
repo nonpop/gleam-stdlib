@@ -2,7 +2,7 @@ import gleam/bit_array
 import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string_tree
 
@@ -10,6 +10,7 @@ import gleam/string_tree
 /// We likely get data like this from interop with Erlang, or from
 /// IO with the outside world.
 ///
+@external(go, "", "Dynamic_t")
 pub type Dynamic
 
 /// Error returned when unexpected data is encountered
@@ -28,6 +29,7 @@ pub type Decoder(t) =
 ///
 @external(erlang, "gleam_stdlib", "identity")
 @external(javascript, "../gleam_stdlib.mjs", "identity")
+@external(go, "", "From")
 pub fn from(a: anything) -> Dynamic
 
 /// Decodes a `Dynamic` value from a `Dynamic` value.
@@ -63,7 +65,9 @@ pub fn bit_array(from data: Dynamic) -> Result(BitArray, DecodeErrors) {
 
 @external(erlang, "gleam_stdlib", "decode_bit_array")
 @external(javascript, "../gleam_stdlib.mjs", "decode_bit_array")
+@external(go, "", "decodeBitArray")
 fn decode_bit_array(a: Dynamic) -> Result(BitArray, DecodeErrors)
+
 
 /// Checks to see whether a `Dynamic` value is a string, and returns that string if
 /// it is.
@@ -80,8 +84,12 @@ fn decode_bit_array(a: Dynamic) -> Result(BitArray, DecodeErrors)
 /// // -> Error([DecodeError(expected: "String", found: "Int", path: [])])
 /// ```
 ///
-@external(javascript, "../gleam_stdlib.mjs", "decode_string")
 pub fn string(from data: Dynamic) -> Result(String, DecodeErrors) {
+  decode_string(data)
+}
+
+@target(erlang)
+fn decode_string(data: Dynamic) -> Result(String, DecodeErrors) {
   bit_array(data)
   |> map_errors(put_expected(_, "String"))
   |> result.try(fn(raw) {
@@ -93,15 +101,24 @@ pub fn string(from data: Dynamic) -> Result(String, DecodeErrors) {
   })
 }
 
+@target(erlang)
+fn put_expected(error: DecodeError, expected: String) -> DecodeError {
+  DecodeError(..error, expected: expected)
+}
+
+@target(javascript)
+@external(javascript, "../gleam_stdlib.mjs", "decode_string")
+fn decode_string(from data: Dynamic) -> Result(String, DecodeErrors)
+
+@target(go)
+@external(go, "", "decodeString")
+fn decode_string(from data: Dynamic) -> Result(String, DecodeErrors)
+
 fn map_errors(
   result: Result(a, DecodeErrors),
   f: fn(DecodeError) -> DecodeError,
 ) -> Result(a, DecodeErrors) {
   result.map_error(result, list.map(_, f))
-}
-
-fn put_expected(error: DecodeError, expected: String) -> DecodeError {
-  DecodeError(..error, expected: expected)
 }
 
 /// Return a string indicating the type of the dynamic value.
@@ -113,6 +130,7 @@ fn put_expected(error: DecodeError, expected: String) -> DecodeError {
 ///
 @external(erlang, "gleam_stdlib", "classify_dynamic")
 @external(javascript, "../gleam_stdlib.mjs", "classify_dynamic")
+@external(go, "", "Classify")
 pub fn classify(data: Dynamic) -> String
 
 /// Checks to see whether a `Dynamic` value is an int, and returns that int if it
@@ -136,6 +154,7 @@ pub fn int(from data: Dynamic) -> Result(Int, DecodeErrors) {
 
 @external(erlang, "gleam_stdlib", "decode_int")
 @external(javascript, "../gleam_stdlib.mjs", "decode_int")
+@external(go, "", "decodeInt")
 fn decode_int(a: Dynamic) -> Result(Int, DecodeErrors)
 
 /// Checks to see whether a `Dynamic` value is a float, and returns that float if
@@ -159,6 +178,7 @@ pub fn float(from data: Dynamic) -> Result(Float, DecodeErrors) {
 
 @external(erlang, "gleam_stdlib", "decode_float")
 @external(javascript, "../gleam_stdlib.mjs", "decode_float")
+@external(go, "", "decodeFloat")
 fn decode_float(a: Dynamic) -> Result(Float, DecodeErrors)
 
 /// Checks to see whether a `Dynamic` value is a bool, and returns that bool if
@@ -182,6 +202,7 @@ pub fn bool(from data: Dynamic) -> Result(Bool, DecodeErrors) {
 
 @external(erlang, "gleam_stdlib", "decode_bool")
 @external(javascript, "../gleam_stdlib.mjs", "decode_bool")
+@external(go, "", "decodeBool")
 fn decode_bool(a: Dynamic) -> Result(Bool, DecodeErrors)
 
 /// Checks to see whether a `Dynamic` value is a list, and returns that list if it
@@ -208,6 +229,7 @@ pub fn shallow_list(from value: Dynamic) -> Result(List(Dynamic), DecodeErrors) 
 
 @external(erlang, "gleam_stdlib", "decode_list")
 @external(javascript, "../gleam_stdlib.mjs", "decode_list")
+@external(go, "", "decodeList")
 fn decode_list(a: Dynamic) -> Result(List(Dynamic), DecodeErrors)
 
 /// Checks to see whether a `Dynamic` value is a result of a particular type, and
@@ -261,7 +283,8 @@ pub fn result(
 
 @external(erlang, "gleam_stdlib", "decode_result")
 @external(javascript, "../gleam_stdlib.mjs", "decode_result")
-fn decode_result(a: Dynamic) -> Result(Result(a, e), DecodeErrors)
+@external(go, "", "decodeResult")
+fn decode_result(a: Dynamic) -> Result(Result(Dynamic, Dynamic), DecodeErrors)
 
 /// Checks to see whether a `Dynamic` value is a list of a particular type, and
 /// returns that list if it is.
@@ -349,9 +372,33 @@ pub fn optional(of decode: Decoder(inner)) -> Decoder(Option(inner)) {
   fn(value) { decode_optional(value, decode) }
 }
 
+@target(erlang)
 @external(erlang, "gleam_stdlib", "decode_option")
+fn decode_optional(a: Dynamic, b: Decoder(a)) -> Result(Option(a), DecodeErrors)
+
+@target(javascript)
 @external(javascript, "../gleam_stdlib.mjs", "decode_option")
 fn decode_optional(a: Dynamic, b: Decoder(a)) -> Result(Option(a), DecodeErrors)
+
+@target(go)
+fn decode_optional(value: Dynamic, decode_some: Decoder(a)) -> Result(Option(a), DecodeErrors) {
+  use inner_result <- result.try(go_decode_optional(value))
+
+  case inner_result {
+    Some(raw) -> {
+      use value <- result.try(
+        decode_some(raw)
+        |> map_errors(push_path(_, "some")),
+      )
+      Ok(Some(value))
+    }
+    None -> Ok(None)
+  }
+}
+
+@target(go)
+@external(go, "", "decodeOption")
+fn go_decode_optional(a: Dynamic) -> Result(Option(Dynamic), DecodeErrors)
 
 /// Checks to see if a `Dynamic` value is a map with a specific field, and returns
 /// the value of that field if it is.
@@ -434,6 +481,7 @@ pub fn optional_field(
 
 @external(erlang, "gleam_stdlib", "decode_field")
 @external(javascript, "../gleam_stdlib.mjs", "decode_field")
+@external(go, "", "decodeField")
 fn decode_field(a: Dynamic, b: name) -> Result(Option(Dynamic), DecodeErrors)
 
 /// Checks to see if a `Dynamic` value is a tuple large enough to have a certain
@@ -497,36 +545,43 @@ fn at_least_decode_tuple_error(
 }
 
 // A tuple of unknown size
+@external(go, "", "unknownTuple_t")
 type UnknownTuple
 
 @external(erlang, "gleam_stdlib", "decode_tuple")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple")
+@external(go, "", "decodeTuple")
 fn decode_tuple(a: Dynamic) -> Result(UnknownTuple, DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "decode_tuple2")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple2")
+@external(go, "", "decodeTuple2")
 fn decode_tuple2(a: Dynamic) -> Result(#(Dynamic, Dynamic), DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "decode_tuple3")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple3")
+@external(go, "", "decodeTuple3")
 fn decode_tuple3(
   a: Dynamic,
 ) -> Result(#(Dynamic, Dynamic, Dynamic), DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "decode_tuple4")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple4")
+@external(go, "", "decodeTuple4")
 fn decode_tuple4(
   a: Dynamic,
 ) -> Result(#(Dynamic, Dynamic, Dynamic, Dynamic), DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "decode_tuple5")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple5")
+@external(go, "", "decodeTuple5")
 fn decode_tuple5(
   a: Dynamic,
 ) -> Result(#(Dynamic, Dynamic, Dynamic, Dynamic, Dynamic), DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "decode_tuple6")
 @external(javascript, "../gleam_stdlib.mjs", "decode_tuple6")
+@external(go, "", "decodeTuple6")
 fn decode_tuple6(
   a: Dynamic,
 ) -> Result(
@@ -536,10 +591,12 @@ fn decode_tuple6(
 
 @external(erlang, "gleam_stdlib", "tuple_get")
 @external(javascript, "../gleam_stdlib.mjs", "tuple_get")
+@external(go, "", "tupleGet")
 fn tuple_get(a: UnknownTuple, b: Int) -> Result(Dynamic, DecodeErrors)
 
 @external(erlang, "gleam_stdlib", "size_of_tuple")
 @external(javascript, "../gleam_stdlib.mjs", "length")
+@external(go, "", "tupleLength")
 fn tuple_size(a: UnknownTuple) -> Int
 
 fn tuple_errors(
@@ -985,6 +1042,7 @@ pub fn dict(
 
 @external(erlang, "gleam_stdlib", "decode_map")
 @external(javascript, "../gleam_stdlib.mjs", "decode_map")
+@external(go, "", "decodeDict")
 fn decode_dict(a: Dynamic) -> Result(Dict(Dynamic, Dynamic), DecodeErrors)
 
 /// Joins multiple decoders into one. When run they will each be tried in turn

@@ -1,19 +1,19 @@
 //// Functions for working with floats.
-//// 
+////
 //// ## Float representation
-//// 
+////
 //// Floats are represented as 64 bit floating point numbers on both the Erlang
 //// and JavaScript runtimes. The floating point behaviour is native to their
 //// respective runtimes, so their exact behaviour will be slightly different on
-//// the two runtimes. 
-//// 
+//// the two runtimes.
+////
 //// ### Infinity and NaN
-//// 
+////
 //// Under the JavaScript runtime, exceeding the maximum (or minimum)
 //// representable value for a floating point value will result in Infinity (or
 //// -Infinity). Should you try to divide two infinities you will get NaN as a
-//// result. 
-//// 
+//// result.
+////
 //// When running on BEAM, exceeding the maximum (or minimum) representable
 //// value for a floating point value will raise an error.
 ////
@@ -48,6 +48,7 @@ import gleam/order.{type Order}
 ///
 @external(erlang, "gleam_stdlib", "parse_float")
 @external(javascript, "../gleam_stdlib.mjs", "parse_float")
+@external(go, "", "Parse")
 pub fn parse(string: String) -> Result(Float, Nil)
 
 /// Returns the string representation of the provided `Float`.
@@ -61,6 +62,7 @@ pub fn parse(string: String) -> Result(Float, Nil)
 ///
 @external(erlang, "gleam_stdlib", "float_to_string")
 @external(javascript, "../gleam_stdlib.mjs", "float_to_string")
+@external(go, "", "ToString")
 pub fn to_string(x: Float) -> String
 
 /// Restricts a `Float` between a lower and upper bound.
@@ -207,6 +209,7 @@ pub fn max(a: Float, b: Float) -> Float {
 ///
 @external(erlang, "math", "ceil")
 @external(javascript, "../gleam_stdlib.mjs", "ceiling")
+@external(go, "", "Ceiling")
 pub fn ceiling(x: Float) -> Float
 
 /// Rounds the value to the next lowest whole number as a `Float`.
@@ -220,6 +223,7 @@ pub fn ceiling(x: Float) -> Float
 ///
 @external(erlang, "math", "floor")
 @external(javascript, "../gleam_stdlib.mjs", "floor")
+@external(go, "", "Floor")
 pub fn floor(x: Float) -> Float
 
 /// Rounds the value to the nearest whole number as an `Int`.
@@ -237,6 +241,7 @@ pub fn floor(x: Float) -> Float
 /// ```
 ///
 @external(erlang, "erlang", "round")
+@external(go, "", "Round")
 pub fn round(x: Float) -> Int {
   case x >=. 0.0 {
     True -> js_round(x)
@@ -258,6 +263,7 @@ fn js_round(a: Float) -> Int
 ///
 @external(erlang, "erlang", "trunc")
 @external(javascript, "../gleam_stdlib.mjs", "truncate")
+@external(go, "", "Truncate")
 pub fn truncate(x: Float) -> Int
 
 /// Converts the value to a given precision as a `Float`.
@@ -292,6 +298,7 @@ pub fn to_precision(x: Float, precision: Int) -> Float {
 
 @external(erlang, "erlang", "float")
 @external(javascript, "../gleam_stdlib.mjs", "identity")
+@external(go, "", "doToFloat")
 fn do_to_float(a: Int) -> Float
 
 /// Returns the absolute value of the input as a `Float`.
@@ -361,6 +368,7 @@ pub fn power(base: Float, of exponent: Float) -> Result(Float, Nil) {
 
 @external(erlang, "math", "pow")
 @external(javascript, "../gleam_stdlib.mjs", "power")
+@external(go, "", "doPower")
 fn do_power(a: Float, b: Float) -> Float
 
 /// Returns the square root of the input as a `Float`.
@@ -452,6 +460,7 @@ fn product_loop(numbers: List(Float), initial: Float) -> Float {
 ///
 @external(erlang, "rand", "uniform")
 @external(javascript, "../gleam_stdlib.mjs", "random_uniform")
+@external(go, "", "Random")
 pub fn random() -> Float
 
 /// Computes the modulo of an float division of inputs as a `Result`.
@@ -637,6 +646,7 @@ pub fn logarithm(x: Float) -> Result(Float, Nil) {
 
 @external(erlang, "math", "log")
 @external(javascript, "../gleam_stdlib.mjs", "log")
+@external(go, "", "doLog")
 fn do_log(x: Float) -> Float
 
 /// Returns e (Euler's number) raised to the power of the given exponent, as
@@ -661,4 +671,5 @@ fn do_log(x: Float) -> Float
 ///
 @external(erlang, "math", "exp")
 @external(javascript, "../gleam_stdlib.mjs", "exp")
+@external(go, "", "Exponential")
 pub fn exponential(x: Float) -> Float

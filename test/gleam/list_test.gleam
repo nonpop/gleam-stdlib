@@ -17,6 +17,9 @@ const recursion_test_cycles = 1_000_000
 @target(javascript)
 const recursion_test_cycles = 40_000
 
+@target(go)
+const recursion_test_cycles = 1_000_000
+
 pub fn length_test() {
   list.length([])
   |> should.equal(0)

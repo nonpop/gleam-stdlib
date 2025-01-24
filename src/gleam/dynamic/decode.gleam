@@ -425,6 +425,7 @@ fn index(
 
 @external(erlang, "gleam_stdlib_decode_ffi", "strict_index")
 @external(javascript, "../../gleam_stdlib_decode_ffi.mjs", "strict_index")
+@external(go, "", "strictIndex")
 fn bare_index(data: Dynamic, key: anything) -> Result(Option(Dynamic), String)
 
 fn push_path(
@@ -724,10 +725,11 @@ pub fn list(of inner: Decoder(a)) -> Decoder(List(a)) {
 
 @external(erlang, "gleam_stdlib_decode_ffi", "list")
 @external(javascript, "../../gleam_stdlib_decode_ffi.mjs", "list")
+@external(go, "", "decodeList")
 fn decode_list(
   data: Dynamic,
   item: fn(Dynamic) -> #(t, List(DecodeError)),
-  push_path: fn(#(t, List(DecodeError)), key) -> #(t, List(DecodeError)),
+  push_path: fn(#(t, List(DecodeError)), String) -> #(t, List(DecodeError)),
   index: Int,
   acc: List(t),
 ) -> #(List(t), List(DecodeError))
@@ -793,6 +795,7 @@ fn fold_dict(
 
 @external(erlang, "gleam_stdlib_decode_ffi", "dict")
 @external(javascript, "../../gleam_stdlib_decode_ffi.mjs", "dict")
+@external(go, "", "decodeDict")
 fn decode_dict(data: Dynamic) -> Result(Dict(Dynamic, Dynamic), Nil)
 
 /// A decoder that decodes nullable values of a type decoded by with a given
